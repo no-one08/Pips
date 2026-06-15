@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Alchemist | OS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================
+       PHASE 2 - DESIGN SYSTEM & TOKENS
+       ========================================= */
+    :root {
+      --bg-base: #050507;
+      --bg-gradient: radial-gradient(circle at 50% 0%, #16161a 0%, #050507 80%);
+      --surface-1: rgba(20, 20, 23, 0.7);
+      --surface-2: #18181c;
+      --surface-3: #27272d;
+      --surface-hover: #32323a;
+      
+      --accent: #C9A84C;
+      --accent-glow: rgba(201, 168, 76, 0.3);
+      --accent-grad: linear-gradient(135deg, #DFB955 0%, #B3923B 100%);
+      
+      --pos: #00FF88;
+      --pos-glow: rgba(0, 255, 136, 0.2);
+      --neg: #FF4560;
+      --neg-glow: rgba(255, 69, 96, 0.2);
+      
+      --text-main: #FAFAFA;
+      --text-muted: #A1A1AA;
+      --text-dark: #121214;
+      
+      --font-disp: 'Bebas Neue', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --shadow-inset: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    body { 
+      background: var(--bg-base); background-image: var(--bg-gradient);
+      color: var(--text-main); font-family: var(--font-body); 
+      display: flex; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .display-num { font-family: var(--font-disp); letter-spacing: 1.5px; font-weight: normal; }
+    h2 { font-size: 24px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .data-val { font-family: var(--font-mono); }
+
+    /* =========================================
+       LAYOUT: SIDEBAR & MAIN
+       ========================================= */
+    .sidebar { 
+      width: 72px; background: var(--surface-1); backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(255,255,255,0.05); 
+      display: flex; flex-direction: column; align-items: center; padding: 24px 0; z-index: 10;
+    }
+    .nav-btn { 
+      width: 44px; height: 44px; margin-bottom: 16px; 
+      background: transparent; border: 1px solid transparent; 
+      color: var(--text-muted); font-family: var(--font-disp); font-size: 22px; 
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: var(--radius-md); 
+    }
+    .nav-btn:hover { background: var(--surface-3); color: var(--text-main); transform: translateY(-2px); }
+    .nav-btn.active { 
+      background: var(--accent-glow); color: var(--accent); 
+      border: 1px solid var(--accent); box-shadow: 0 0 15px var(--accent-glow);
+    }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    /* =========================================
+       HEADER: TICKER & SESSIONS
+       ========================================= */
+    .header { 
+      height: 54px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+      background: var(--surface-1); backdrop-filter: blur(12px);
+      display: flex; align-items: center; overflow: hidden; position: relative; z-index: 5;
+    }
+    .ticker-wrap { display: flex; white-space: nowrap; animation: ticker 25s linear infinite; }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .ticker-item { margin-right: 48px; font-family: var(--font-mono); font-size: 13px; font-weight: 600; }
+    .ticker-item span { color: var(--text-muted); margin-right: 8px; font-weight: normal; }
+
+    .sessions { 
+      position: absolute; right: 24px; display: flex; gap: 12px; 
+      background: linear-gradient(90deg, transparent, var(--surface-2) 20%); 
+      padding-left: 40px; height: 100%; align-items: center;
+    }
+    .session-chip { 
+      font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: var(--radius-sm); 
+      background: var(--surface-3); color: var(--text-muted); 
+      display: flex; align-items: center; gap: 6px; letter-spacing: 0.5px; transition: 0.3s;
+    }
+    .session-chip.active { background: var(--pos-glow); color: var(--pos); border: 1px solid rgba(0,255,136,0.3); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 8px var(--pos); animation: pulse 2s infinite; display: none; }
+    .session-chip.active .dot { display: block; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+
+    /* =========================================
+       PANELS, GRIDS & CARDS
+       ========================================= */
+    .panel { padding: 32px; display: none; overflow-y: auto; height: calc(100vh - 54px); }
+    .panel.active { display: block; animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .card { 
+      background: rgba(24, 24, 28, 0.6); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.05); padding: 24px; 
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-card); 
+    }
+
+    /* =========================================
+       INPUTS & BUTTONS
+       ========================================= */
+    label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
+    input, select, textarea { 
+      width: 100%; background: var(--surface-3); border: 1px solid transparent; 
+      color: var(--text-main); font-family: var(--font-mono); padding: 12px 14px; 
+      font-size: 14px; margin-bottom: 20px; outline: none; transition: all 0.2s; 
+      border-radius: var(--radius-sm); box-shadow: var(--shadow-inset);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); background: #1f1f24; box-shadow: 0 0 0 3px var(--accent-glow); }
+    
+    button.btn { 
+      background: var(--surface-3); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); 
+      padding: 14px 24px; cursor: pointer; font-family: var(--font-disp); font-size: 18px; 
+      transition: all 0.2s; border-radius: var(--radius-sm); letter-spacing: 1px;
+      display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+    }
+    button.btn:hover { background: var(--surface-hover); transform: translateY(-2px); }
+    button.btn.primary { background: var(--accent-grad); color: var(--text-dark); border: none; font-weight: bold; box-shadow: 0 4px 15px var(--accent-glow); }
+    button.btn.primary:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(201, 168, 76, 0.4); }
+    button.btn.danger { background: rgba(255, 69, 96, 0.1); color: var(--neg); border-color: var(--neg); }
+    button.btn.danger:hover { background: var(--neg); color: #fff; box-shadow: 0 4px 15px var(--neg-glow); }
+
+    /* =========================================
+       BROKER GRID
+       ========================================= */
+    .broker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .broker-card { 
+      background: var(--surface-2); border: 1px solid rgba(255,255,255,0.05); 
+      padding: 12px; text-align: center; cursor: pointer; transition: 0.2s; 
+      border-radius: var(--radius-md); 
+    }
+    .broker-card:hover { background: var(--surface-hover); transform: translateY(-2px); }
+    .broker-card.active { 
+      border-color: var(--accent); background: linear-gradient(180deg, rgba(201,168,76,0.1) 0%, transparent 100%); 
+      box-shadow: 0 4px 12px var(--accent-glow); 
+    }
+    .broker-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .broker-badge { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); background: var(--surface-3); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+
+    /* =========================================
+       TRANSMUTATION METER & ALERTS
+       ========================================= */
+    .meter-container { display: flex; align-items: center; gap: 32px; background: var(--surface-2); padding: 20px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.03); }
+    .gauge-svg { transform: rotate(-90deg); width: 120px; height: 120px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+    .gauge-bg { fill: none; stroke: var(--surface-3); stroke-width: 10; }
+    .gauge-fill { fill: none; stroke: var(--accent); stroke-width: 10; stroke-dasharray: 314.16; stroke-dashoffset: 314.16; transition: stroke-dashoffset 1s cubic-bezier(.4,0,.2,1), stroke 0.5s; stroke-linecap: round; }
+    .meter-details h2 { font-size: 42px; margin-bottom: -4px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    .meter-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; font-weight: 500; letter-spacing: 0.5px;}
+    
+    .mini-bar-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .mini-bar-label { font-size: 10px; width: 28px; color: var(--text-muted); font-weight: 600; }
+    .mini-bar-bg { flex: 1; height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden; box-shadow: var(--shadow-inset); }
+    .mini-bar-fill { height: 100%; background: var(--accent-grad); width: 0%; transition: width 0.5s; border-radius: 3px; }
+
+    .alerts-container { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+    .alert { padding: 12px 16px; font-size: 12px; border-left: 3px solid; background: rgba(0,0,0,0.3); font-family: var(--font-mono); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .alert.red { border-color: var(--neg); color: #ff8a9a; background: linear-gradient(90deg, rgba(255,69,96,0.1), transparent); }
+    .alert.gold { border-color: var(--accent); color: #eaddab; background: linear-gradient(90deg, rgba(201,168,76,0.1), transparent); }
+    .alert.green { border-color: var(--pos); color: #88ffc2; background: linear-gradient(90deg, rgba(0,255,136,0.1), transparent); }
+
+    /* =========================================
+       JOURNAL, TABLES & TOASTS
+       ========================================= */
+    .table-container { background: var(--surface-2); border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-mono); }
+    th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    th { color: var(--text-muted); font-family: var(--font-body); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .loss { color: var(--neg); font-weight: 600; } .win { color: var(--pos); font-weight: 600; } .be { color: var(--accent); font-weight: 600; }
+    
+    .equity-svg-container { width: 100%; height: 180px; background: var(--surface-2); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-md); position: relative; overflow: hidden; }
+
+    .toast-container { position: fixed; top: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; z-index: 100; pointer-events: none; }
+    .toast { background: rgba(24, 24, 28, 0.9); backdrop-filter: blur(8px); border: 1px solid; border-left-width: 4px; padding: 16px 20px; font-family: var(--font-mono); font-size: 13px; border-radius: var(--radius-sm); box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+    @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* =========================================
+       STREAK & UTILS
+       ========================================= */
+    .streak-container { display: flex; gap: 6px; margin-top: 8px; }
+    .streak-box { width: 20px; height: 20px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3); }
+    .streak-box.W { background: var(--pos); box-shadow: 0 0 8px var(--pos-glow); } 
+    .streak-box.L { background: var(--neg); box-shadow: 0 0 8px var(--neg-glow); } 
+    .streak-box.BE { background: var(--surface-3); }
+    
+    .confetti { position: fixed; z-index: 999; pointer-events: none; border-radius: 2px; }
+    .text-right { text-align: right; }
+    .mb-4 { margin-bottom: 24px; }
+    .mb-2 { margin-bottom: 12px; }
+    .stat-box { display: flex; flex-direction: column; gap: 4px; }
+    .stat-box .display-num { font-size: 32px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <button class="nav-btn active" data-target="calc" title="Calculator">◱</button>
+    <button class="nav-btn" data-target="journal" title="Journal">▤</button>
+    <button class="nav-btn" data-target="growth" title="Growth Simulator">◭</button>
+    <button class="nav-btn" data-target="prop" title="Prop Firm">⎈</button>
+    <button class="nav-btn" data-target="settings" title="Settings">⚙</button>
+  </nav>
+
+  <main class="main-content">
+    
+    <header class="header">
+      <div class="ticker-wrap" id="ticker-wrap"></div>
+      <div class="sessions" id="sessions-container">
+        <div class="session-chip" id="sess-sydney"><div class="dot"></div>SYD</div>
+        <div class="session-chip" id="sess-tokyo"><div class="dot"></div>TOK</div>
+        <div class="session-chip" id="sess-london"><div class="dot"></div>LON</div>
+        <div class="session-chip" id="sess-ny"><div class="dot"></div>NY</div>
+      </div>
+    </header>
+
+    <section id="calc" class="panel active">
+      <div class="grid-2">
+        <div class="card">
+          <h2 class="mb-4">Broker Context</h2>
+          <div class="broker-grid" id="broker-grid"></div>
+          
+          <div class="grid-2">
+            <div><label>Account Balance</label><input type="number" id="c_balance" value="10000" step="100"></div>
+            <div><label>Risk %</label><input type="number" id="c_riskPct" value="1.0" step="0.1"></div>
+            <div><label>Stop Loss (Pips)</label><input type="number" id="c_sl" value="15" step="0.5"></div>
+            <div><label>Take Profit (Pips)</label><input type="number" id="c_tp" value="30" step="0.5"></div>
+            <div>
+              <label>Pair Type</label>
+              <select id="c_pairType">
+                <option value="major">Major ($10/pip)</option>
+                <option value="minor">Minor ($7/pip)</option>
+                <option value="exotic">Exotic ($4/pip)</option>
+              </select>
+            </div>
+            <div><label>Historical Win Rate %</label><input type="number" id="c_wr" value="45" step="1"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="mb-4">Transmutation Matrix</h2>
+          <div class="meter-container mb-4">
+            <svg class="gauge-svg" viewBox="0 0 120 120">
+              <defs>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+              <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
+              <circle class="gauge-fill" id="meter-fill" cx="60" cy="60" r="50" filter="url(#glow)"></circle>
+            </svg>
+            <div class="meter-details" style="flex:1">
+              <h2 id="meter-score" style="font-size: 56px;">0</h2>
+              <div class="meter-desc" id="meter-tier">AWAITING DATA</div>
+              <div class="mini-bar-wrap"><span class="mini-bar-label">RSK</span><div class="mini-bar-bg"><div class="mini-bar-fill" id="mb-rsk"></div></div></div>
+              <div class="mini-bar-wrap"><span class="mini-bar-label">R:R</span><div class="mini-bar-bg"><div class="mini-bar-fill" id="mb-rr"></div></div></div>
+              <div class="mini-bar-wrap"><span class="mini-bar-label">W/R</span><div class="mini-bar-bg"><div class="mini-bar-fill" id="mb-wr"></div></div></div>
+            </div>
+          </div>
+
+          <div class="grid-2 mt-4" style="gap: 16px; background: var(--surface-2); padding: 16px; border-radius: var(--radius-md);">
+            <div class="stat-box"><label>Suggested Lot</label><div class="display-num data-val" id="out_lot" style="color: var(--accent);">0.00</div></div>
+            <div class="stat-box"><label>Risk Amount</label><div class="display-num data-val" id="out_riskAmt">$0.00</div></div>
+            <div class="stat-box"><label>R:R Ratio</label><div class="display-num data-val" id="out_rr">1:0</div></div>
+            <div class="stat-box"><label>Expected Value</label><div class="display-num data-val" id="out_ev">$0.00</div></div>
+            <div class="stat-box" style="grid-column: span 2;"><label>Consecutive losses to 90% Drawdown</label><div class="display-num data-val" id="out_blowout" style="font-size: 20px; color: var(--text-muted);">0</div></div>
+          </div>
+          <div class="alerts-container" id="alerts-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="journal" class="panel">
+      <div class="grid-2 mb-4">
+        <div class="card">
+          <h2 class="mb-4">Log Trade</h2>
+          <div class="grid-2">
+            <div><label>Pair</label><input type="text" id="j_pair" placeholder="EURUSD"></div>
+            <div>
+              <label>Direction</label>
+              <select id="j_dir"><option value="LONG">LONG</option><option value="SHORT">SHORT</option></select>
+            </div>
+            <div><label>Lot Size</label><input type="number" id="j_lot" step="0.01"></div>
+            <div><label>PnL ($)</label><input type="number" id="j_pnl" step="0.01"></div>
+            <div>
+              <label>Mood State</label>
+              <select id="j_mood">
+                <option value="Patient">Patient</option><option value="Confident">Confident</option>
+                <option value="FOMO">FOMO</option><option value="Revenge">Revenge</option><option value="Bored">Bored</option>
+              </select>
+            </div>
+            <div><label>Bal After</label><input type="number" id="j_bal" step="0.01"></div>
+          </div>
+          <button class="btn primary" style="width:100%; margin-top: 8px;" onclick="App.logTrade()">Transmit to Journal</button>
+        </div>
+        <div class="card">
+          <h2 class="mb-4">Equity Curve</h2>
+          <div class="equity-svg-container mb-4" id="equity-container"></div>
+          <div style="background: var(--surface-2); padding: 16px; border-radius: var(--radius-sm);">
+            <label>Recent Streak (Last 10)</label>
+            <div class="streak-container" id="streak-container"></div>
+            <p class="data-val mt-2" id="streak-msg" style="font-size:12px; margin-top:12px; font-weight: 600;"></p>
+          </div>
+        </div>
+      </div>
+      <div class="table-container shadow">
+        <table id="journal-table">
+          <thead><tr><th>Date</th><th>Pair</th><th>Dir</th><th>Lot</th><th>PnL</th><th>Mood</th><th>Balance</th><th style="width:50px;"></th></tr></thead>
+          <tbody id="journal-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="growth" class="panel">
+      <div class="card grid-2">
+        <div>
+          <h2 class="mb-4">Simulation Parameters</h2>
+          <div class="grid-2">
+            <div><label>Start Balance</label><input type="number" id="g_bal" value="10000"></div>
+            <div><label>Daily Profit Target %</label><input type="number" id="g_prof" value="0.5" step="0.1"></div>
+            <div><label>Win Days / Wk</label><input type="number" id="g_winD" value="3" max="5"></div>
+            <div><label>Loss Days / Wk</label><input type="number" id="g_lossD" value="2" max="5"></div>
+            <div><label>Weeks to Run</label><input type="number" id="g_wks" value="52"></div>
+            <div><label>Monthly Withdrawal %</label><input type="number" id="g_with" value="0"></div>
+          </div>
+          <button class="btn primary" style="width:100%" onclick="App.runSimulator()">Run Simulation</button>
+        </div>
+        <div>
+          <h2 class="mb-4">Projection Matrix</h2>
+          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+            <div id="sim-output"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="prop" class="panel">
+      <div class="card grid-2">
+        <div>
+          <h2 class="mb-4">Challenge Tracker</h2>
+          <div><label>Firm & Phase</label><input type="text" id="p_firm" value="FTMO Phase 1" oninput="App.saveProp()"></div>
+          <div class="grid-2">
+            <div><label>Starting Balance</label><input type="number" id="p_start" value="100000" oninput="App.saveProp()"></div>
+            <div><label>Current Balance</label><input type="number" id="p_curr" value="100000" oninput="App.saveProp()"></div>
+            <div><label>Target %</label><input type="number" id="p_tgt" value="10" oninput="App.saveProp()"></div>
+            <div><label>Max Drawdown %</label><input type="number" id="p_dd" value="10" oninput="App.saveProp()"></div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content: center; background: var(--surface-2); border-radius: var(--radius-md); padding: 32px;">
+          <div class="meter-container mb-4" style="background: transparent; border: none; padding: 0;">
+             <svg class="gauge-svg" viewBox="0 0 160 160" style="width: 180px; height: 180px;">
+              <circle class="gauge-bg" cx="80" cy="80" r="70" stroke-width="12"></circle>
+              <circle class="gauge-fill" id="prop-fill" cx="80" cy="80" r="70" stroke-width="12" stroke-dasharray="439.8" stroke-dashoffset="439.8" filter="url(#glow)"></circle>
+            </svg>
+            <div style="text-align: center;">
+              <h2 id="prop-pct" style="font-size: 56px; color: var(--pos); justify-content: center; text-shadow: 0 0 20px var(--pos-glow);">0%</h2>
+              <div class="data-val" style="color: var(--text-muted); letter-spacing: 2px; font-size: 12px; text-transform: uppercase;">To Target</div>
+            </div>
+          </div>
+          <div style="width: 100%; margin-top: 16px;">
+            <label style="display: flex; justify-content: space-between;"><span>Drawdown Used</span> <span id="prop-dd-val" class="data-val">0%</span></label>
+            <div class="mini-bar-bg" style="height: 12px; border-radius: 6px;"><div class="mini-bar-fill" id="prop-dd-fill" style="background:var(--neg); border-radius: 6px;"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="settings" class="panel">
+      <div class="card grid-2">
+        <div>
+          <h2 class="mb-4">Data Management</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.6;">All data is stored locally in your browser. Export your data regularly to prevent loss if your browser cache is cleared.</p>
+          <button class="btn mb-4" onclick="App.exportData()" style="width: 100%;">↓ Export JSON Backup</button>
+          <button class="btn danger" onclick="App.clearData()" style="width: 100%;">⚠ WIPE ALL LOCAL DATA</button>
+        </div>
+        <div>
+          <h2 class="mb-4">Discipline Manifesto</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">These rules govern your execution. Read them before every session.</p>
+          <textarea id="s_manifesto" style="height:180px; font-size: 14px; line-height: 1.8; color: var(--accent);" oninput="App.saveSettings()">1. I will not revenge trade.&#10;2. I accept the risk before clicking.&#10;3. I protect capital above all.</textarea>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    const App = (function() {
+      const state = {
+        activeBroker: 1, trades: [],
+        prop: { firm: 'FTMO Phase 1', start: 100000, curr: 100000, tgt: 10, dd: 10 },
+        manifesto: "1. I will not revenge trade.\n2. I accept the risk before clicking.\n3. I protect capital above all."
+      };
+
+      const config = {
+        brokers: [
+          { id: 1, name: 'OANDA', lev: 50, badge: 'REG' }, { id: 2, name: 'IG', lev: 50, badge: 'REG' },
+          { id: 3, name: 'IC Markets', lev: 500, badge: 'OS' }, { id: 4, name: 'Hankotrade', lev: 500, badge: 'UNR' },
+          { id: 5, name: 'FTMO', lev: 100, badge: 'PROP' }, { id: 6, name: 'Funding Pips', lev: 100, badge: 'PROP' }
+        ],
+        pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CHF', 'NZD/USD', 'EUR/GBP', 'GBP/JPY', 'XAU/USD'],
+        basePrices: [1.0950, 1.2740, 150.20, 0.6540, 0.8850, 0.6120, 0.8550, 191.40, 2035.50]
+      };
+
+      function init() {
+        loadData(); setupNav(); setupLiveCalculators(); renderBrokerGrid();
+        startTicker(); startSessionClock(); renderJournal(); renderProp();
+        document.getElementById('s_manifesto').value = state.manifesto;
+        runCalculations();
+      }
+
+      function loadData() {
+        try {
+          const t = localStorage.getItem('pa2_trades'); if (t) state.trades = JSON.parse(t);
+          const p = localStorage.getItem('pa2_prop'); if (p) state.prop = JSON.parse(p);
+          const m = localStorage.getItem('pa2_manifesto'); if (m) state.manifesto = JSON.parse(m);
+        } catch(e) { console.error("Data restore failed", e); }
+      }
+      function saveTrades() { localStorage.setItem('pa2_trades', JSON.stringify(state.trades)); }
+      function saveProp() {
+        state.prop = {
+          firm: document.getElementById('p_firm').value, start: parseFloat(document.getElementById('p_start').value),
+          curr: parseFloat(document.getElementById('p_curr').value), tgt: parseFloat(document.getElementById('p_tgt').value),
+          dd: parseFloat(document.getElementById('p_dd').value)
+        };
+        localStorage.setItem('pa2_prop', JSON.stringify(state.prop)); renderProp();
+      }
+      function saveSettings() {
+        state.manifesto = document.getElementById('s_manifesto').value;
+        localStorage.setItem('pa2_manifesto', JSON.stringify(state.manifesto));
+      }
+      function exportData() {
+        const dump = JSON.stringify({ trades: state.trades, prop: state.prop, manifesto: state.manifesto });
+        const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(dump);
+        a.download = `PA2_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+        showToast('Data exported successfully', 'green');
+      }
+      function clearData() {
+        if(confirm("WIPE ALL DATA? This cannot be undone.")) {
+          if(confirm("Are you absolutely sure?")) { localStorage.clear(); location.reload(); }
+        }
+      }
+
+      function setupNav() {
+        const btns = document.querySelectorAll('.nav-btn'); const panels = document.querySelectorAll('.panel');
+        btns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            btns.forEach(b => b.classList.remove('active')); panels.forEach(p => p.classList.remove('active'));
+            btn.classList.add('active'); document.getElementById(btn.dataset.target).classList.add('active');
+            if(btn.dataset.target === 'journal') renderEquityCurve();
+          });
+        });
+      }
+
+      function renderBrokerGrid() {
+        const grid = document.getElementById('broker-grid');
+        grid.innerHTML = config.brokers.map(b => `
+          <div class="broker-card ${state.activeBroker === b.id ? 'active' : ''}" onclick="App.pickBroker(${b.id})">
+            <div class="broker-name">${b.name}</div>
+            <div class="broker-badge">${b.badge} | 1:${b.lev}</div>
+          </div>
+        `).join('');
+      }
+      function pickBroker(id) { state.activeBroker = id; renderBrokerGrid(); showToast(`Broker set to ${config.brokers.find(b=>b.id===id).name}`, 'gold'); runCalculations(); }
+
+      function startTicker() {
+        const wrap = document.getElementById('ticker-wrap');
+        const update = () => {
+          let html = '';
+          for(let i=0; i<config.pairs.length; i++) {
+            const drift = 1 + ((Math.random() - 0.5) * 0.002); config.basePrices[i] = config.basePrices[i] * drift;
+            const priceStr = config.pairs[i].includes('JPY') ? config.basePrices[i].toFixed(2) : config.basePrices[i].toFixed(4);
+            const color = drift > 1 ? 'var(--pos)' : drift < 1 ? 'var(--neg)' : 'var(--text-main)';
+            html += `<div class="ticker-item"><span>${config.pairs[i]}</span><strong style="color:${color}">${priceStr}</strong></div>`;
+          }
+          wrap.innerHTML = html + html; 
+        };
+        update(); setInterval(update, 1800);
+      }
+
+      // ==============================================================================
+      // SESSION CLOCK LOGIC
+      // Automatically tracks your local machine time -> UTC -> Market Hours
+      // ==============================================================================
+      function startSessionClock() {
+        const checkSessions = () => {
+          // Get current hour in Universal Time (UTC)
+          const utc = new Date().getUTCHours();
+          
+          // Logic Gate to check if the current UTC hour falls within session bounds
+          const check = (s, e) => s > e ? (utc >= s || utc < e) : (utc >= s && utc < e);
+          
+          // Toggle the CSS 'active' class on the HTML chips based on the check
+          document.getElementById('sess-sydney').classList.toggle('active', check(21, 6)); // Syd: 21:00 - 06:00 UTC
+          document.getElementById('sess-tokyo').classList.toggle('active', check(0, 9));   // Tok: 00:00 - 09:00 UTC
+          document.getElementById('sess-london').classList.toggle('active', check(8, 16)); // Lon: 08:00 - 16:00 UTC
+          document.getElementById('sess-ny').classList.toggle('active', check(13, 21));    // NY: 13:00 - 21:00 UTC
+        };
+        
+        checkSessions(); // Fire immediately on load
+        setInterval(checkSessions, 60000); // Re-evaluate every 60 seconds
+      }
+      // ==============================================================================
+
+      function calculateLotSize(bal, rPct, sl, type) { return Math.floor((bal * (rPct / 100)) / (sl * (type === 'major' ? 10 : type === 'minor' ? 7 : 4)) * 100) / 100; }
+      function calculateEV(wr, profit, risk) { return (wr/100 * profit) - ((1 - wr/100) * risk); }
+      
+      function setupLiveCalculators() { ['c_balance', 'c_riskPct', 'c_sl', 'c_tp', 'c_pairType', 'c_wr'].forEach(id => document.getElementById(id).addEventListener('input', runCalculations)); }
+
+      function runCalculations() {
+        const bal = parseFloat(document.getElementById('c_balance').value) || 0; const rPct = parseFloat(document.getElementById('c_riskPct').value) || 0;
+        const sl = parseFloat(document.getElementById('c_sl').value) || 1; const tp = parseFloat(document.getElementById('c_tp').value) || 1;
+        const wr = parseFloat(document.getElementById('c_wr').value) || 0; const type = document.getElementById('c_pairType').value;
+
+        const lot = calculateLotSize(bal, rPct, sl, type); const riskAmt = bal * (rPct/100); const rr = tp / sl;
+        const ev = calculateEV(wr, riskAmt * rr, riskAmt);
+        
+        let blowout = 0; let temp = bal; while(temp > bal * 0.1 && blowout < 1000) { temp -= temp * (rPct/100); blowout++; }
+
+        document.getElementById('out_lot').innerText = lot.toFixed(2);
+        document.getElementById('out_riskAmt').innerText = '$' + riskAmt.toFixed(2);
+        document.getElementById('out_rr').innerText = `1:${rr.toFixed(2)}`;
+        document.getElementById('out_ev').innerText = (ev>=0?'+':'') + '$' + ev.toFixed(2);
+        document.getElementById('out_ev').style.color = ev >= 0 ? 'var(--pos)' : 'var(--neg)';
+        document.getElementById('out_blowout').innerText = rPct <= 0 ? '∞' : blowout;
+
+        // Transmutation Score
+        const rScore = Math.min(Math.max(((2 - rPct) / 2) * 100, 0), 100);
+        const rrScore = Math.min(Math.max(((rr - 0.5) / 2.5) * 100, 0), 100);
+        const wrScore = Math.min(Math.max(((wr - 40) / 40) * 100, 0), 100);
+        const score = Math.round((rScore * 0.35) + (rrScore * 0.40) + (wrScore * 0.25));
+
+        const fill = document.getElementById('meter-fill'); fill.style.strokeDashoffset = 314.16 - (314.16 * (score / 100));
+        
+        let color = 'var(--neg)'; let tier = 'FOOL\'S GOLD (Check Risk/RR)';
+        if(score >= 80) { color = 'var(--accent)'; tier = 'PURE GOLD (A+ Setup)'; }
+        else if(score >= 60) { color = 'var(--pos)'; tier = 'REFINING (Tradeable)'; }
+        else if(score >= 40) { color = '#aaaaaa'; tier = 'RAW ORE (Sub-optimal)'; }
+        
+        fill.style.stroke = color; document.getElementById('meter-score').innerText = score;
+        document.getElementById('meter-score').style.color = color; document.getElementById('meter-tier').innerText = tier;
+
+        document.getElementById('mb-rsk').style.width = rScore + '%'; document.getElementById('mb-rsk').style.background = rScore < 50 ? 'var(--neg)' : 'var(--accent-grad)';
+        document.getElementById('mb-rr').style.width = rrScore + '%'; document.getElementById('mb-rr').style.background = rrScore < 50 ? 'var(--neg)' : 'var(--accent-grad)';
+        document.getElementById('mb-wr').style.width = wrScore + '%'; document.getElementById('mb-wr').style.background = wrScore < 50 ? 'var(--neg)' : 'var(--accent-grad)';
+
+        const alerts = [];
+        if(ev < 0) alerts.push({m: "Negative Expected Value. Mathematically unsound over time.", c: "red"});
+        if(rPct > 3) alerts.push({m: "Risk per trade exceeds 3%. Account blowout risk severe.", c: "red"});
+        if(rr < 1) alerts.push({m: "Reward to Risk ratio is below 1:1. Requires extremely high win rate.", c: "gold"});
+        if(alerts.length === 0) alerts.push({m: "Metrics stable. Setup conforms to matrix parameters.", c: "green"});
+        document.getElementById('alerts-container').innerHTML = alerts.map(a => `<div class="alert ${a.c}">${a.m}</div>`).join('');
+      }
+
+      function logTrade() {
+        const pair = document.getElementById('j_pair').value.toUpperCase(); const dir = document.getElementById('j_dir').value;
+        const lot = parseFloat(document.getElementById('j_lot').value); const pnl = parseFloat(document.getElementById('j_pnl').value);
+        const mood = document.getElementById('j_mood').value; const bal = parseFloat(document.getElementById('j_bal').value);
+
+        if(!pair || isNaN(lot) || isNaN(pnl) || isNaN(bal)) return showToast("Missing journal fields", "red");
+
+        const lastTwo = state.trades.slice(-2);
+        if(lastTwo.length === 2 && lastTwo[0].pnl < 0 && lastTwo[1].pnl < 0 && mood !== 'Patient') {
+          if(!confirm("REVENGE TRADE GUARD: Your last 2 trades were losses and mood is not Patient. Override?")) return;
+        }
+
+        const t = { id: Date.now(), date: new Date().toISOString().split('T')[0], pair, dir, lot, pnl, mood, balAfter: bal, outcome: pnl > 0 ? 'W' : pnl < 0 ? 'L' : 'BE' };
+        state.trades.push(t); saveTrades();
+        
+        if(t.outcome === 'W') triggerConfetti();
+        showToast("Trade logged to vault", t.outcome === 'W' ? 'green' : t.outcome === 'L' ? 'red' : 'gold');
+        document.getElementById('j_pair').value = ''; document.getElementById('j_pnl').value = ''; renderJournal();
+      }
+
+      function deleteTrade(id) { state.trades = state.trades.filter(t => t.id !== id); saveTrades(); renderJournal(); }
+
+      function renderJournal() {
+        document.getElementById('journal-body').innerHTML = state.trades.slice().reverse().map(t => {
+          const c = t.outcome === 'W' ? 'win' : t.outcome === 'L' ? 'loss' : 'be';
+          return `<tr>
+            <td>${t.date}</td><td><strong>${t.pair}</strong></td><td>${t.dir}</td><td>${t.lot}</td>
+            <td class="${c}">${t.pnl>0?'+':''}$${t.pnl.toFixed(2)}</td>
+            <td><span style="background:var(--surface-3);padding:2px 6px;border-radius:4px;font-size:10px;">${t.mood}</span></td>
+            <td>$${t.balAfter.toFixed(2)}</td>
+            <td><button class="nav-btn" style="width:28px;height:28px;font-size:12px;margin:0;border-radius:4px;" onclick="App.deleteTrade(${t.id})">✕</button></td>
+          </tr>`;
+        }).join('');
+        renderEquityCurve(); renderStreak();
+      }
+
+      function renderEquityCurve() {
+        const container = document.getElementById('equity-container');
+        if(state.trades.length < 2) { container.innerHTML = '<div style="padding:24px;color:var(--text-muted);text-align:center;">Requires 2+ trades to plot curve</div>'; return; }
+        
+        const balances = state.trades.map(t => t.balAfter);
+        const max = Math.max(...balances); const min = Math.min(...balances); const range = max - min === 0 ? 1 : max - min;
+        const w = container.clientWidth || 600; const h = 180;
+        
+        let pts = balances.map((b, i) => `${(i / (balances.length - 1)) * w},${h - (((b - min) / range) * (h - 40)) - 20}`).join(' ');
+
+        container.innerHTML = `
+          <svg width="100%" height="180" viewBox="0 0 ${w} ${h}">
+            <defs>
+              <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="lineGlow"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <polygon points="0,${h} ${pts} ${w},${h}" fill="url(#eqGrad)" />
+            <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3" filter="url(#lineGlow)" vector-effect="non-scaling-stroke"/>
+          </svg>`;
+      }
+
+      function renderStreak() {
+        const sc = document.getElementById('streak-container'); const sm = document.getElementById('streak-msg');
+        const last10 = state.trades.slice(-10);
+        sc.innerHTML = last10.map(t => `<div class="streak-box ${t.outcome}" title="${t.pnl}"></div>`).join('');
+        if(last10.length === 0) { sm.innerText = 'No recent data.'; return; }
+        
+        let streak = 1; let lastOut = last10[last10.length-1].outcome;
+        for(let i=last10.length-2; i>=0; i--) { if(last10[i].outcome === lastOut) streak++; else break; }
+
+        if(streak >= 3 && lastOut === 'W') { sm.innerText = `🔥 ${streak} WIN STREAK. Stay disciplined. Don't increase risk.`; sm.style.color='var(--pos)'; }
+        else if(streak >= 3 && lastOut === 'L') { sm.innerText = `❄️ ${streak} LOSS STREAK. Step away. Cooldown active.`; sm.style.color='var(--neg)'; }
+        else { sm.innerText = "Chop state active. Protect capital."; sm.style.color='var(--text-muted)'; }
+      }
+
+      function runSimulator() {
+        const bal = parseFloat(document.getElementById('g_bal').value); const pct = parseFloat(document.getElementById('g_prof').value) / 100;
+        const wd = parseInt(document.getElementById('g_winD').value); const ld = parseInt(document.getElementById('g_lossD').value);
+        const wks = parseInt(document.getElementById('g_wks').value); const wth = parseFloat(document.getElementById('g_with').value) / 100;
+        
+        let current = bal; let html = '<table><tr><th>Week</th><th>EOW Balance</th><th>Withdrawal</th></tr>';
+        
+        for(let i=1; i<=wks; i++) {
+          for(let d=0; d<wd; d++) current += (current * pct);
+          for(let d=0; d<ld; d++) current -= (current * (pct * 0.55));
+          
+          let wdAmt = 0;
+          if(i % 4 === 0 && wth > 0) {
+            const prof = current - bal; if(prof > 0) { wdAmt = prof * wth; current -= wdAmt; }
+          }
+          html += `<tr><td>Wk ${i}</td><td><strong style="color:var(--pos)">$${current.toFixed(2)}</strong></td><td>${wdAmt>0?'-$'+wdAmt.toFixed(2):'<span style="color:var(--text-muted)">-</span>'}</td></tr>`;
+        }
+        document.getElementById('sim-output').innerHTML = html + `</table><div class="mt-4 text-right" style="padding: 16px; background: rgba(0,255,136,0.1); border-radius: var(--radius-sm); border: 1px solid var(--pos);"><span style="color:var(--text-muted)">Final Projected Capital:</span> <span class="display-num" style="font-size:24px; color:var(--pos)">$${current.toFixed(2)}</span></div>`;
+      }
+
+      function renderProp() {
+        document.getElementById('p_firm').value = state.prop.firm; document.getElementById('p_start').value = state.prop.start;
+        document.getElementById('p_curr').value = state.prop.curr; document.getElementById('p_tgt').value = state.prop.tgt;
+        document.getElementById('p_dd').value = state.prop.dd;
+
+        const p = state.prop; const targetBal = p.start * (1 + (p.tgt/100)); const maxLossBal = p.start * (1 - (p.dd/100));
+        const profitMade = p.curr - p.start; const profitReq = targetBal - p.start;
+        let progPct = Math.max(0, Math.min(100, (profitMade / profitReq) * 100)) || 0;
+        
+        const ddUsed = p.start - p.curr; const ddAllowed = p.start - maxLossBal;
+        let ddPct = Math.max(0, Math.min(100, (ddUsed / ddAllowed) * 100)) || 0;
+
+        const fill = document.getElementById('prop-fill');
+        fill.style.strokeDashoffset = 439.8 - (439.8 * (progPct / 100));
+        fill.style.stroke = progPct >= 100 ? 'var(--pos)' : 'var(--accent)';
+        
+        const pctEl = document.getElementById('prop-pct'); pctEl.innerText = progPct.toFixed(1) + '%';
+        pctEl.style.color = progPct >= 100 ? 'var(--pos)' : 'var(--accent)';
+
+        if(progPct >= 100 && profitMade > 0) showToast("🏆 CHALLENGE TARGET REACHED", "green");
+
+        const ddBar = document.getElementById('prop-dd-fill'); ddBar.style.width = ddPct + '%';
+        document.getElementById('prop-dd-val').innerText = ddPct.toFixed(1) + '%';
+        if(ddPct > 80) ddBar.style.background = 'var(--neg)'; else if(ddPct > 50) ddBar.style.background = 'var(--accent)'; else ddBar.style.background = 'var(--pos)';
+      }
+
+      function showToast(msg, color='gold') {
+        const tc = document.getElementById('toast-container'); const t = document.createElement('div');
+        t.className = 'toast'; t.style.borderColor = `var(--${color === 'green' ? 'pos' : color === 'red' ? 'neg' : 'accent'})`;
+        t.innerHTML = `<strong style="color:inherit">${msg}</strong>`; tc.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; setTimeout(()=>t.remove(), 400); }, 3000);
+      }
+
+      function triggerConfetti() {
+        const colors = ['#C9A84C', '#00FF88', '#ffffff'];
+        for(let i=0; i<60; i++) {
+          const c = document.createElement('div'); c.className = 'confetti';
+          c.style.width = Math.random() * 8 + 6 + 'px'; c.style.height = c.style.width;
+          c.style.background = colors[Math.floor(Math.random() * colors.length)];
+          c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px';
+          const dur = Math.random() * 2 + 1.5; c.style.transition = `transform ${dur}s linear, top ${dur}s cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
+          document.body.appendChild(c);
+          setTimeout(() => { c.style.top = '100vh'; c.style.transform = `rotate(${Math.random()*1080}deg) translateX(${Math.random()*100-50}px)`; }, 10);
+          setTimeout(() => c.remove(), dur * 1000);
+        }
+      }
+
+      return { init, pickBroker, logTrade, deleteTrade, runSimulator, saveProp, saveSettings, exportData, clearData };
+    })();
+
+    document.addEventListener('DOMContentLoaded', App.init);
+  </script>
+</body>
+</html>
