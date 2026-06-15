@@ -148,7 +148,7 @@
     /* =========================================
        BROKER GRID
        ========================================= */
-    .broker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .broker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; max-height: 180px; overflow-y: auto; padding-right: 4px; }
     .broker-card { 
       background: var(--surface-2); border: 1px solid rgba(255,255,255,0.05); 
       padding: 12px; text-align: center; cursor: pointer; transition: 0.2s; 
@@ -159,7 +159,7 @@
       border-color: var(--accent); background: linear-gradient(180deg, rgba(201,168,76,0.1) 0%, transparent 100%); 
       box-shadow: 0 4px 12px var(--accent-glow); 
     }
-    .broker-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .broker-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .broker-badge { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); background: var(--surface-3); padding: 2px 6px; border-radius: 4px; display: inline-block; }
 
     /* =========================================
@@ -244,6 +244,30 @@
           <h2 class="mb-4">Broker Context</h2>
           <div class="broker-grid" id="broker-grid"></div>
           
+          <div style="background: var(--surface-1); padding: 14px; border-radius: var(--radius-md); margin-bottom: 20px; border: 1px dashed rgba(255,255,255,0.08);">
+            <label style="margin-bottom: 8px; color: var(--accent);">＋ Add Custom Broker</label>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end;">
+              <div>
+                <label style="font-size: 9px; letter-spacing: 0.5px;">Name</label>
+                <input type="text" id="b_name" placeholder="e.g., Pepperstone" style="margin-bottom:0; padding: 8px 10px; font-size:12px;">
+              </div>
+              <div>
+                <label style="font-size: 9px; letter-spacing: 0.5px;">Leverage (1:X)</label>
+                <input type="number" id="b_lev" value="100" min="1" max="2000" style="margin-bottom:0; padding: 8px 10px; font-size:12px;">
+              </div>
+              <div>
+                <label style="font-size: 9px; letter-spacing: 0.5px;">Tier</label>
+                <select id="b_badge" style="margin-bottom:0; padding: 8px 10px; font-size:12px; height:34px;">
+                  <option value="REG">REG</option>
+                  <option value="OS">OS</option>
+                  <option value="PROP">PROP</option>
+                  <option value="UNR">UNR</option>
+                </select>
+              </div>
+              <button class="btn primary" style="padding: 0 16px; height: 34px; font-size: 13px; margin-bottom:0;" onclick="App.addCustomBroker()">Add</button>
+            </div>
+          </div>
+          
           <div class="grid-2">
             <div><label>Account Balance</label><input type="number" id="c_balance" value="10000" step="100"></div>
             <div><label>Risk %</label><input type="number" id="c_riskPct" value="1.0" step="0.1"></div>
@@ -285,10 +309,11 @@
 
           <div class="grid-2 mt-4" style="gap: 16px; background: var(--surface-2); padding: 16px; border-radius: var(--radius-md);">
             <div class="stat-box"><label>Suggested Lot</label><div class="display-num data-val" id="out_lot" style="color: var(--accent);">0.00</div></div>
+            <div class="stat-box"><label>Required Margin</label><div class="display-num data-val" id="out_margin" style="color: #61b5ff;">$0.00</div></div>
             <div class="stat-box"><label>Risk Amount</label><div class="display-num data-val" id="out_riskAmt">$0.00</div></div>
             <div class="stat-box"><label>R:R Ratio</label><div class="display-num data-val" id="out_rr">1:0</div></div>
             <div class="stat-box"><label>Expected Value</label><div class="display-num data-val" id="out_ev">$0.00</div></div>
-            <div class="stat-box" style="grid-column: span 2;"><label>Consecutive losses to 90% Drawdown</label><div class="display-num data-val" id="out_blowout" style="font-size: 20px; color: var(--text-muted);">0</div></div>
+            <div class="stat-box"><label>Blowout Streak</label><div class="display-num data-val" id="out_blowout" style="color: var(--text-muted); font-size: 28px;">0</div></div>
           </div>
           <div class="alerts-container" id="alerts-container"></div>
         </div>
@@ -413,13 +438,13 @@
   <script>
     const App = (function() {
       const state = {
-        activeBroker: 1, trades: [],
+        activeBroker: 1, brokers: [], trades: [],
         prop: { firm: 'FTMO Phase 1', start: 100000, curr: 100000, tgt: 10, dd: 10 },
         manifesto: "1. I will not revenge trade.\n2. I accept the risk before clicking.\n3. I protect capital above all."
       };
 
       const config = {
-        brokers: [
+        defaultBrokers: [
           { id: 1, name: 'OANDA', lev: 50, badge: 'REG' }, { id: 2, name: 'IG', lev: 50, badge: 'REG' },
           { id: 3, name: 'IC Markets', lev: 500, badge: 'OS' }, { id: 4, name: 'Hankotrade', lev: 500, badge: 'UNR' },
           { id: 5, name: 'FTMO', lev: 100, badge: 'PROP' }, { id: 6, name: 'Funding Pips', lev: 100, badge: 'PROP' }
@@ -440,6 +465,11 @@
           const t = localStorage.getItem('pa2_trades'); if (t) state.trades = JSON.parse(t);
           const p = localStorage.getItem('pa2_prop'); if (p) state.prop = JSON.parse(p);
           const m = localStorage.getItem('pa2_manifesto'); if (m) state.manifesto = JSON.parse(m);
+          
+          // Load brokers or fall back to defaults
+          const b = localStorage.getItem('pa2_brokers');
+          if (b) state.brokers = JSON.parse(b);
+          else state.brokers = [...config.defaultBrokers];
         } catch(e) { console.error("Data restore failed", e); }
       }
       function saveTrades() { localStorage.setItem('pa2_trades', JSON.stringify(state.trades)); }
@@ -456,7 +486,7 @@
         localStorage.setItem('pa2_manifesto', JSON.stringify(state.manifesto));
       }
       function exportData() {
-        const dump = JSON.stringify({ trades: state.trades, prop: state.prop, manifesto: state.manifesto });
+        const dump = JSON.stringify({ trades: state.trades, prop: state.prop, manifesto: state.manifesto, brokers: state.brokers });
         const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(dump);
         a.download = `PA2_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
         showToast('Data exported successfully', 'green');
@@ -480,14 +510,39 @@
 
       function renderBrokerGrid() {
         const grid = document.getElementById('broker-grid');
-        grid.innerHTML = config.brokers.map(b => `
+        grid.innerHTML = state.brokers.map(b => `
           <div class="broker-card ${state.activeBroker === b.id ? 'active' : ''}" onclick="App.pickBroker(${b.id})">
-            <div class="broker-name">${b.name}</div>
+            <div class="broker-name" title="${b.name}">${b.name}</div>
             <div class="broker-badge">${b.badge} | 1:${b.lev}</div>
           </div>
         `).join('');
       }
-      function pickBroker(id) { state.activeBroker = id; renderBrokerGrid(); showToast(`Broker set to ${config.brokers.find(b=>b.id===id).name}`, 'gold'); runCalculations(); }
+      
+      function pickBroker(id) { 
+        state.activeBroker = id; 
+        renderBrokerGrid(); 
+        const match = state.brokers.find(b=>b.id===id);
+        showToast(`Broker set to ${match ? match.name : 'Selected'}`, 'gold'); 
+        runCalculations(); 
+      }
+
+      function addCustomBroker() {
+        const name = document.getElementById('b_name').value.trim();
+        const lev = parseInt(document.getElementById('b_lev').value);
+        const badge = document.getElementById('b_badge').value;
+
+        if(!name || isNaN(lev) || lev <= 0) return showToast("Invalid name or leverage value", "red");
+
+        const newBroker = { id: Date.now(), name, lev, badge };
+        state.brokers.push(newBroker);
+        localStorage.setItem('pa2_brokers', JSON.stringify(state.brokers));
+        state.activeBroker = newBroker.id;
+        
+        renderBrokerGrid();
+        runCalculations();
+        showToast(`Broker ${name} added online`, 'green');
+        document.getElementById('b_name').value = '';
+      }
 
       function startTicker() {
         const wrap = document.getElementById('ticker-wrap');
@@ -504,29 +559,17 @@
         update(); setInterval(update, 1800);
       }
 
-      // ==============================================================================
-      // SESSION CLOCK LOGIC
-      // Automatically tracks your local machine time -> UTC -> Market Hours
-      // ==============================================================================
       function startSessionClock() {
         const checkSessions = () => {
-          // Get current hour in Universal Time (UTC)
           const utc = new Date().getUTCHours();
-          
-          // Logic Gate to check if the current UTC hour falls within session bounds
           const check = (s, e) => s > e ? (utc >= s || utc < e) : (utc >= s && utc < e);
-          
-          // Toggle the CSS 'active' class on the HTML chips based on the check
-          document.getElementById('sess-sydney').classList.toggle('active', check(21, 6)); // Syd: 21:00 - 06:00 UTC
-          document.getElementById('sess-tokyo').classList.toggle('active', check(0, 9));   // Tok: 00:00 - 09:00 UTC
-          document.getElementById('sess-london').classList.toggle('active', check(8, 16)); // Lon: 08:00 - 16:00 UTC
-          document.getElementById('sess-ny').classList.toggle('active', check(13, 21));    // NY: 13:00 - 21:00 UTC
+          document.getElementById('sess-sydney').classList.toggle('active', check(21, 6));
+          document.getElementById('sess-tokyo').classList.toggle('active', check(0, 9));
+          document.getElementById('sess-london').classList.toggle('active', check(8, 16));
+          document.getElementById('sess-ny').classList.toggle('active', check(13, 21));
         };
-        
-        checkSessions(); // Fire immediately on load
-        setInterval(checkSessions, 60000); // Re-evaluate every 60 seconds
+        checkSessions(); setInterval(checkSessions, 60000);
       }
-      // ==============================================================================
 
       function calculateLotSize(bal, rPct, sl, type) { return Math.floor((bal * (rPct / 100)) / (sl * (type === 'major' ? 10 : type === 'minor' ? 7 : 4)) * 100) / 100; }
       function calculateEV(wr, profit, risk) { return (wr/100 * profit) - ((1 - wr/100) * risk); }
@@ -543,7 +586,12 @@
         
         let blowout = 0; let temp = bal; while(temp > bal * 0.1 && blowout < 1000) { temp -= temp * (rPct/100); blowout++; }
 
+        // Find selected broker profile for required margin calculation
+        const currentB = state.brokers.find(b => b.id === state.activeBroker) || { lev: 50 };
+        const requiredMargin = (lot * 100000) / currentB.lev;
+
         document.getElementById('out_lot').innerText = lot.toFixed(2);
+        document.getElementById('out_margin').innerText = '$' + requiredMargin.toFixed(2);
         document.getElementById('out_riskAmt').innerText = '$' + riskAmt.toFixed(2);
         document.getElementById('out_rr').innerText = `1:${rr.toFixed(2)}`;
         document.getElementById('out_ev').innerText = (ev>=0?'+':'') + '$' + ev.toFixed(2);
@@ -573,6 +621,7 @@
         const alerts = [];
         if(ev < 0) alerts.push({m: "Negative Expected Value. Mathematically unsound over time.", c: "red"});
         if(rPct > 3) alerts.push({m: "Risk per trade exceeds 3%. Account blowout risk severe.", c: "red"});
+        if(requiredMargin > bal) alerts.push({m: "MARGIN EXHAUSTION: Position margin exceeds total capital. Lower size or add leverage.", c: "red"});
         if(rr < 1) alerts.push({m: "Reward to Risk ratio is below 1:1. Requires extremely high win rate.", c: "gold"});
         if(alerts.length === 0) alerts.push({m: "Metrics stable. Setup conforms to matrix parameters.", c: "green"});
         document.getElementById('alerts-container').innerHTML = alerts.map(a => `<div class="alert ${a.c}">${a.m}</div>`).join('');
@@ -719,7 +768,7 @@
         }
       }
 
-      return { init, pickBroker, logTrade, deleteTrade, runSimulator, saveProp, saveSettings, exportData, clearData };
+      return { init, pickBroker, addCustomBroker, logTrade, deleteTrade, runSimulator, saveProp, saveSettings, exportData, clearData };
     })();
 
     document.addEventListener('DOMContentLoaded', App.init);
