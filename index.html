@@ -171,6 +171,20 @@
     .btn-delete-broker:hover { background: rgba(255, 69, 96, 0.2); color: var(--neg); }
 
     /* =========================================
+       FAVORITE PAIRS UTILITY UI
+       ========================================= */
+    .fav-shelf { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; min-height: 28px; }
+    .fav-chip { 
+      background: var(--surface-2); border: 1px solid rgba(255,255,255,0.05);
+      padding: 4px 8px; font-size: 11px; font-family: var(--font-mono); font-weight: 600;
+      border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;
+    }
+    .fav-chip:hover { background: var(--surface-hover); border-color: var(--accent); }
+    .fav-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+    .fav-chip .remove-fav { color: var(--text-muted); font-size: 9px; cursor: pointer; padding: 2px; border-radius: 2px; }
+    .fav-chip .remove-fav:hover { background: rgba(255,69,96,0.2); color: var(--neg); }
+
+    /* =========================================
        TRANSMUTATION METER & ALERTS
        ========================================= */
     .meter-container { display: flex; align-items: center; gap: 32px; background: var(--surface-2); padding: 20px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.03); }
@@ -249,7 +263,7 @@
     <section id="calc" class="panel active">
       <div class="grid-2">
         <div class="card">
-          <h2 class="mb-4">Broker Context</h2>
+          <h2 class="mb-4">Broker & Asset Config</h2>
           <div class="broker-grid" id="broker-grid"></div>
           
           <div style="background: var(--surface-1); padding: 14px; border-radius: var(--radius-md); margin-bottom: 20px; border: 1px dashed rgba(255,255,255,0.08);">
@@ -275,21 +289,27 @@
               <button class="btn primary" style="padding: 0 16px; height: 34px; font-size: 13px; margin-bottom:0;" onclick="App.addCustomBroker()">Add</button>
             </div>
           </div>
+
+          <div style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-md); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
+            <label style="color: var(--accent); display: flex; justify-content: space-between;">
+              <span>Asset Engine Search</span>
+              <span id="active-pair-badge" style="font-family: var(--font-mono); text-transform: uppercase;">MAJOR</span>
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 12px;">
+              <input type="text" id="pair-search" list="all-pairs-list" placeholder="Search Asset (e.g. XAUUSD, EURUSD, BTCUSD)" style="margin-bottom: 0;" oninput="App.onPairSearchChange()">
+              <button class="btn" style="padding: 0 16px; font-size: 16px;" onclick="App.toggleActiveFavorite()" title="Toggle Favorite">★</button>
+              <datalist id="all-pairs-list"></datalist>
+            </div>
+            <label>Favorites (Max 7)</label>
+            <div class="fav-shelf" id="fav-shelf"></div>
+          </div>
           
           <div class="grid-2">
             <div><label>Account Balance</label><input type="number" id="c_balance" value="10000" step="100"></div>
             <div><label>Risk %</label><input type="number" id="c_riskPct" value="1.0" step="0.1"></div>
-            <div><label>Stop Loss (Pips)</label><input type="number" id="c_sl" value="15" step="0.5"></div>
-            <div><label>Take Profit (Pips)</label><input type="number" id="c_tp" value="30" step="0.5"></div>
-            <div>
-              <label>Pair Type</label>
-              <select id="c_pairType">
-                <option value="major">Major ($10/pip)</option>
-                <option value="minor">Minor ($7/pip)</option>
-                <option value="exotic">Exotic ($4/pip)</option>
-              </select>
-            </div>
-            <div><label>Historical Win Rate %</label><input type="number" id="c_wr" value="45" step="1"></div>
+            <div><label>Stop Loss (Pips / Points)</label><input type="number" id="c_sl" value="15" step="0.5"></div>
+            <div><label>Take Profit (Pips / Points)</label><input type="number" id="c_tp" value="30" step="0.5"></div>
+            <div style="grid-column: span 2;"><label>Historical Win Rate %</label><input type="number" id="c_wr" value="45" step="1"></div>
           </div>
         </div>
 
@@ -447,6 +467,7 @@
     const App = (function() {
       const state = {
         activeBroker: 1, brokers: [], trades: [],
+        activePair: 'EURUSD', favorites: ['EURUSD', 'GBPUSD', 'XAUUSD', 'BTCUSD'],
         prop: { firm: 'FTMO Phase 1', start: 100000, curr: 100000, tgt: 10, dd: 10 },
         manifesto: "1. I will not revenge trade.\n2. I accept the risk before clicking.\n3. I protect capital above all."
       };
@@ -457,14 +478,48 @@
           { id: 3, name: 'IC Markets', lev: 500, badge: 'OS' }, { id: 4, name: 'Hankotrade', lev: 500, badge: 'UNR' },
           { id: 5, name: 'FTMO', lev: 100, badge: 'PROP' }, { id: 6, name: 'Funding Pips', lev: 100, badge: 'PROP' }
         ],
-        pairs: ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CHF', 'NZD/USD', 'EUR/GBP', 'GBP/JPY', 'XAU/USD'],
-        basePrices: [1.0950, 1.2740, 150.20, 0.6540, 0.8850, 0.6120, 0.8550, 191.40, 2035.50]
+        // COMPREHENSIVE PAIRS ARCHITECTURE
+        pairDatabase: [
+          // MAJORS
+          { name: 'EURUSD', type: 'major', defaultPrice: 1.0950 },
+          { name: 'GBPUSD', type: 'major', defaultPrice: 1.2740 },
+          { name: 'USDJPY', type: 'major', defaultPrice: 150.20 },
+          { name: 'AUDUSD', type: 'major', defaultPrice: 0.6540 },
+          { name: 'USDCAD', type: 'major', defaultPrice: 1.3520 },
+          { name: 'USDCHF', type: 'major', defaultPrice: 0.8850 },
+          { name: 'NZDUSD', type: 'major', defaultPrice: 0.6120 },
+          // MINORS
+          { name: 'EURGBP', type: 'minor', defaultPrice: 0.8550 },
+          { name: 'EURJPY', type: 'minor', defaultPrice: 164.50 },
+          { name: 'GBPJPY', type: 'minor', defaultPrice: 191.40 },
+          { name: 'AUDCAD', type: 'minor', defaultPrice: 0.8820 },
+          { name: 'CHFJPY', type: 'minor', defaultPrice: 169.80 },
+          { name: 'EURAUD', type: 'minor', defaultPrice: 1.6720 },
+          { name: 'GBPAUD', type: 'minor', defaultPrice: 1.9480 },
+          { name: 'AUDJPY', type: 'minor', defaultPrice: 98.30 },
+          // EXOTICS
+          { name: 'USDMXN', type: 'exotic', defaultPrice: 17.10 },
+          { name: 'USDZAR', type: 'exotic', defaultPrice: 19.15 },
+          { name: 'USDTRY', type: 'exotic', defaultPrice: 32.20 },
+          { name: 'USDSEK', type: 'exotic', defaultPrice: 10.45 },
+          { name: 'USDSGD', type: 'exotic', defaultPrice: 1.3450 },
+          { name: 'EURTRY', type: 'exotic', defaultPrice: 35.10 },
+          // METALS
+          { name: 'XAUUSD', type: 'metal', defaultPrice: 2350.00 },
+          { name: 'XAGUSD', type: 'metal', defaultPrice: 28.50 },
+          // CRYPTO
+          { name: 'BTCUSD', type: 'crypto', defaultPrice: 67000.00 },
+          { name: 'ETHUSD', type: 'crypto', defaultPrice: 3500.00 },
+          { name: 'SOLUSD', type: 'crypto', defaultPrice: 150.00 }
+        ]
       };
 
       function init() {
         loadData(); setupNav(); setupLiveCalculators(); renderBrokerGrid();
-        startTicker(); startSessionClock(); renderJournal(); renderProp();
+        buildPairDatalist(); renderFavoritesShelf(); startTicker(); startSessionClock(); 
+        renderJournal(); renderProp();
         document.getElementById('s_manifesto').value = state.manifesto;
+        document.getElementById('pair-search').value = state.activePair;
         runCalculations();
       }
 
@@ -473,11 +528,9 @@
           const t = localStorage.getItem('pa2_trades'); if (t) state.trades = JSON.parse(t);
           const p = localStorage.getItem('pa2_prop'); if (p) state.prop = JSON.parse(p);
           const m = localStorage.getItem('pa2_manifesto'); if (m) state.manifesto = JSON.parse(m);
-          
-          // Load brokers or fall back to defaults
-          const b = localStorage.getItem('pa2_brokers');
-          if (b) state.brokers = JSON.parse(b);
-          else state.brokers = [...config.defaultBrokers];
+          const b = localStorage.getItem('pa2_brokers'); if (b) state.brokers = JSON.parse(b); else state.brokers = [...config.defaultBrokers];
+          const f = localStorage.getItem('pa2_favs'); if (f) state.favorites = JSON.parse(f);
+          const ap = localStorage.getItem('pa2_active_pair'); if (ap) state.activePair = ap;
         } catch(e) { console.error("Data restore failed", e); }
       }
       
@@ -498,7 +551,7 @@
       }
       
       function exportData() {
-        const dump = JSON.stringify({ trades: state.trades, prop: state.prop, manifesto: state.manifesto, brokers: state.brokers });
+        const dump = JSON.stringify({ trades: state.trades, prop: state.prop, manifesto: state.manifesto, brokers: state.brokers, favorites: state.favorites });
         const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(dump);
         a.download = `PA2_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
         showToast('Data exported successfully', 'green');
@@ -559,36 +612,94 @@
       }
 
       function deleteBroker(event, id) {
-        event.stopPropagation(); // Prevent the card click event from firing
-        
-        if(state.brokers.length <= 1) {
-          return showToast("Cannot delete the last broker.", "red");
-        }
+        event.stopPropagation();
+        if(state.brokers.length <= 1) return showToast("Cannot delete the last broker.", "red");
 
         if(confirm("Remove this broker profile?")) {
           state.brokers = state.brokers.filter(b => b.id !== id);
           localStorage.setItem('pa2_brokers', JSON.stringify(state.brokers));
-          
-          if(state.activeBroker === id) {
-            state.activeBroker = state.brokers[0].id;
-          }
-          
+          if(state.activeBroker === id) state.activeBroker = state.brokers[0].id;
           renderBrokerGrid();
           runCalculations();
           showToast("Broker removed", "gold");
         }
       }
 
+      /* =========================================
+         DYNAMIC SEARCH & FAVORITES ENGINE
+         ========================================= */
+      function buildPairDatalist() {
+        const dl = document.getElementById('all-pairs-list');
+        dl.innerHTML = config.pairDatabase.map(p => `<option value="${p.name}">${p.name} (${p.type.toUpperCase()})</option>`).join('');
+      }
+
+      function renderFavoritesShelf() {
+        const shelf = document.getElementById('fav-shelf');
+        shelf.innerHTML = state.favorites.map(f => {
+          const match = config.pairDatabase.find(p => p.name === f) || { type: 'unknown' };
+          const activeClass = state.activePair === f ? 'active' : '';
+          return `
+            <div class="fav-chip ${activeClass}" onclick="App.selectFavorite('${f}')">
+              <span>${f}</span>
+              <span class="remove-fav" onclick="App.removeFavorite(event, '${f}')">✕</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function onPairSearchChange() {
+        const val = document.getElementById('pair-search').value.toUpperCase().trim();
+        const found = config.pairDatabase.find(p => p.name === val);
+        if(found) {
+          state.activePair = val;
+          localStorage.setItem('pa2_active_pair', val);
+          renderFavoritesShelf();
+          runCalculations();
+        }
+      }
+
+      function selectFavorite(pair) {
+        state.activePair = pair;
+        document.getElementById('pair-search').value = pair;
+        localStorage.setItem('pa2_active_pair', pair);
+        renderFavoritesShelf();
+        runCalculations();
+      }
+
+      function toggleActiveFavorite() {
+        const val = state.activePair;
+        if(state.favorites.includes(val)) {
+          state.favorites = state.favorites.filter(f => f !== val);
+          showToast(`${val} removed from favorites`, 'gold');
+        } else {
+          if(state.favorites.length >= 7) return showToast("Maximum of 7 favorite assets reached.", "red");
+          state.favorites.push(val);
+          showToast(`${val} added to favorites`, 'green');
+        }
+        localStorage.setItem('pa2_favs', JSON.stringify(state.favorites));
+        renderFavoritesShelf();
+      }
+
+      function removeFavorite(event, pair) {
+        event.stopPropagation();
+        state.favorites = state.favorites.filter(f => f !== pair);
+        localStorage.setItem('pa2_favs', JSON.stringify(state.favorites));
+        renderFavoritesShelf();
+        showToast(`${pair} removed from favorites`, 'gold');
+      }
+
       function startTicker() {
         const wrap = document.getElementById('ticker-wrap');
         const update = () => {
           let html = '';
-          for(let i=0; i<config.pairs.length; i++) {
-            const drift = 1 + ((Math.random() - 0.5) * 0.002); config.basePrices[i] = config.basePrices[i] * drift;
-            const priceStr = config.pairs[i].includes('JPY') ? config.basePrices[i].toFixed(2) : config.basePrices[i].toFixed(4);
-            const color = drift > 1 ? 'var(--pos)' : drift < 1 ? 'var(--neg)' : 'var(--text-main)';
-            html += `<div class="ticker-item"><span>${config.pairs[i]}</span><strong style="color:${color}">${priceStr}</strong></div>`;
-          }
+          const samplePairs = config.pairDatabase.slice(0, 10);
+          samplePairs.forEach(p => {
+            const drift = 1 + ((Math.random() - 0.5) * 0.002);
+            p.defaultPrice = p.defaultPrice * drift;
+            const priceStr = p.name.includes('JPY') || p.type === 'metal' ? p.defaultPrice.toFixed(2) : p.type === 'crypto' ? p.defaultPrice.toFixed(0) : p.defaultPrice.toFixed(4);
+            const color = drift > 1 ? 'var(--pos)' : 'var(--neg)';
+            html += `<div class="ticker-item"><span>${p.name}</span><strong style="color:${color}">${priceStr}</strong></div>`;
+          });
           wrap.innerHTML = html + html; 
         };
         update(); setInterval(update, 1800);
@@ -606,24 +717,42 @@
         checkSessions(); setInterval(checkSessions, 60000);
       }
 
-      function calculateLotSize(bal, rPct, sl, type) { return Math.floor((bal * (rPct / 100)) / (sl * (type === 'major' ? 10 : type === 'minor' ? 7 : 4)) * 100) / 100; }
+      function calculateLotSize(bal, rPct, sl, type) { 
+        let mult = 10;
+        if(type === 'minor') mult = 7;
+        else if(type === 'exotic') mult = 4;
+        else if(type === 'metal') mult = 10;  // Standard Gold Size rule (1 pip = $0.10)
+        else if(type === 'crypto') mult = 1;  // Standard Crypto rules (1 pip = $1.00)
+        
+        return Math.floor((bal * (rPct / 100)) / (sl * mult) * 100) / 100; 
+      }
+      
       function calculateEV(wr, profit, risk) { return (wr/100 * profit) - ((1 - wr/100) * risk); }
       
-      function setupLiveCalculators() { ['c_balance', 'c_riskPct', 'c_sl', 'c_tp', 'c_pairType', 'c_wr'].forEach(id => document.getElementById(id).addEventListener('input', runCalculations)); }
+      function setupLiveCalculators() { ['c_balance', 'c_riskPct', 'c_sl', 'c_tp', 'c_wr'].forEach(id => document.getElementById(id).addEventListener('input', runCalculations)); }
 
       function runCalculations() {
         const bal = parseFloat(document.getElementById('c_balance').value) || 0; const rPct = parseFloat(document.getElementById('c_riskPct').value) || 0;
         const sl = parseFloat(document.getElementById('c_sl').value) || 1; const tp = parseFloat(document.getElementById('c_tp').value) || 1;
-        const wr = parseFloat(document.getElementById('c_wr').value) || 0; const type = document.getElementById('c_pairType').value;
+        const wr = parseFloat(document.getElementById('c_wr').value) || 0; 
 
-        const lot = calculateLotSize(bal, rPct, sl, type); const riskAmt = bal * (rPct/100); const rr = tp / sl;
+        // Locate pair category automatically
+        const pairData = config.pairDatabase.find(p => p.name === state.activePair) || { type: 'major' };
+        document.getElementById('active-pair-badge').innerText = `${state.activePair} (${pairData.type})`;
+
+        const lot = calculateLotSize(bal, rPct, sl, pairData.type); const riskAmt = bal * (rPct/100); const rr = tp / sl;
         const ev = calculateEV(wr, riskAmt * rr, riskAmt);
         
         let blowout = 0; let temp = bal; while(temp > bal * 0.1 && blowout < 1000) { temp -= temp * (rPct/100); blowout++; }
 
-        // Find selected broker profile for required margin calculation
         const currentB = state.brokers.find(b => b.id === state.activeBroker) || { lev: 50 };
-        const requiredMargin = (lot * 100000) / currentB.lev;
+        
+        // Dynamic contract definitions for margin allocation
+        let contractUnits = 100000; // Forex standard
+        if(pairData.type === 'metal') contractUnits = 100; // Gold oz size
+        if(pairData.type === 'crypto') contractUnits = 1; // 1 BTC contract
+        
+        const requiredMargin = (lot * contractUnits) / currentB.lev;
 
         document.getElementById('out_lot').innerText = lot.toFixed(2);
         document.getElementById('out_margin').innerText = '$' + requiredMargin.toFixed(2);
@@ -633,7 +762,7 @@
         document.getElementById('out_ev').style.color = ev >= 0 ? 'var(--pos)' : 'var(--neg)';
         document.getElementById('out_blowout').innerText = rPct <= 0 ? '∞' : blowout;
 
-        // Transmutation Score
+        // Score formulation
         const rScore = Math.min(Math.max(((2 - rPct) / 2) * 100, 0), 100);
         const rrScore = Math.min(Math.max(((rr - 0.5) / 2.5) * 100, 0), 100);
         const wrScore = Math.min(Math.max(((wr - 40) / 40) * 100, 0), 100);
@@ -658,6 +787,8 @@
         if(rPct > 3) alerts.push({m: "Risk per trade exceeds 3%. Account blowout risk severe.", c: "red"});
         if(requiredMargin > bal) alerts.push({m: "MARGIN EXHAUSTION: Position margin exceeds total capital. Lower size or add leverage.", c: "red"});
         if(rr < 1) alerts.push({m: "Reward to Risk ratio is below 1:1. Requires extremely high win rate.", c: "gold"});
+        if(pairData.type === 'crypto') alerts.push({m: "CRYPTO METRIC: 1 point of SL/TP calculated as exactly $1.00 whole dollar drift.", c: "gold"});
+        if(pairData.type === 'metal') alerts.push({m: "METAL METRIC: 1 point of SL/TP calculated as exactly $0.10 gold ounce drift.", c: "gold"});
         if(alerts.length === 0) alerts.push({m: "Metrics stable. Setup conforms to matrix parameters.", c: "green"});
         document.getElementById('alerts-container').innerHTML = alerts.map(a => `<div class="alert ${a.c}">${a.m}</div>`).join('');
       }
@@ -803,12 +934,15 @@
         }
       }
 
-      // EXPOSE ALL FUNCTIONS TO THE HTML UI
       return { 
         init, 
         pickBroker, 
         addCustomBroker, 
         deleteBroker, 
+        onPairSearchChange,
+        selectFavorite,
+        toggleActiveFavorite,
+        removeFavorite,
         logTrade, 
         deleteTrade, 
         runSimulator, 
